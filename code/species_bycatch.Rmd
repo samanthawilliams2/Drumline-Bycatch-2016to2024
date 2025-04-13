@@ -7,6 +7,20 @@ output: html_document
 
 ## Species bycatch analysis
 
+
+```{r}
+bycatch_rawdata <- read.csv("data/bycatchdata.csv")
+head(bycatch_rawdata)
+```
+
+```{r}
+bycatch_cleaned <- bycatch_rawdata %>% 
+  # For all character/text columns, trim whitespace and apply title case.
+  mutate(across(where(is.character), ~ str_to_title(str_trim(.)))) %>%
+  # Replace "Dead" with "Deceased" in Fate column
+  mutate(Fate = if_else(Fate == "Dead", "Deceased", Fate))
+```
+
 ```{r}
 bycatch_cleaned <- bycatch_rawdata %>% 
   # For all character/text columns, trim whitespace and apply title case.

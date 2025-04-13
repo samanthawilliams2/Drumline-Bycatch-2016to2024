@@ -1,0 +1,139 @@
+---
+title: "Bycatch by location"
+author: "Samantha Williams"
+date: '2025-04-13'
+output: html_document
+---
+
+## Analaysis of bycatch by location
+
+```{r}
+bycatch_rawdata <- read.csv("data/bycatchdata.csv")
+head(bycatch_rawdata)
+```
+
+```{r}
+bycatch_cleaned <- bycatch_rawdata %>% 
+  # For all character/text columns, trim whitespace and apply title case.
+  mutate(across(where(is.character), ~ str_to_title(str_trim(.)))) %>%
+  # Replace "Dead" with "Deceased" in Fate column
+  mutate(Fate = if_else(Fate == "Dead", "Deceased", Fate))
+```
+
+##### 1. Total bycatch per area 
+
+```{r}
+area_counts <- bycatch_cleaned %>%
+  count(Area, sort = TRUE)
+
+# Basic bar plot to understand bycatch events by area 
+ggplot(area_counts, aes(x = reorder(Area, n), y = n)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  labs(
+    x = "Area",
+    y = "Bycatch Count"
+  ) +
+  theme_classic(base_size = 14) +
+  theme(axis.title = element_text(face = "bold"))
+```
+
+##### 2. Total bycatch per location 
+
+```{r}
+# Total bycatch per location
+location_counts <- bycatch_cleaned %>%
+  count(Location, sort = TRUE)
+
+# Fate breakdown by location (with all combinations filled in)
+location_fate <- bycatch_cleaned %>%
+  group_by(Location, Fate) %>%
+  summarise(Count = n(), .groups = "drop") %>%
+  complete(Location, Fate, fill = list(Count = 0)) %>%
+  group_by(Location) %>%
+  mutate(Proportion = Count / sum(Count)) %>%
+  ungroup()
+
+```
+
+```{r}
+# Get top 15 locations by total bycatch
+top_locations <- bycatch_cleaned %>%
+  count(Location, sort = TRUE) %>%
+  slice_max(n, n = 15) %>%
+  pull(Location)
+
+# Filter your fate data
+location_fate_filtered <- location_fate %>%
+  filter(Location %in% top_locations)
+
+
+location_fate_top <- location_fate %>%
+  filter(Location %in% top_locations)
+```
+
+```{r}
+ggplot(location_fate_top, aes(y = reorder(Location, Proportion), x = Proportion, fill = Fate)) +
+  geom_col(position = "stack") +
+  scale_x_continuous(labels = scales::percent_format()) +
+  scale_fill_manual(values = c(
+    "Released Alive" = "seagreen",
+    "Deceased" = "firebrick",
+    "Euthanised" = "goldenrod"
+  )) +
+  labs(
+    title = "Proportion of Bycatch Fate – Top 15 Locations",
+    x = "Proportion of Bycatch Events",
+    y = "Location",
+    fill = "Fate"
+  ) +
+  theme_classic(base_size = 14) +
+  theme(axis.title = element_text(face = "bold"))
+```
+
+
+Location within area:
+```{r}
+# Step 1: Calculate total bycatch per location
+top_locations_by_area <- bycatch_cleaned %>%
+  count(Area, Location, sort = TRUE) %>%
+  group_by(Area) %>%
+  slice_max(n, n = 5) %>%  # Change 5 to any number you like
+  ungroup()
+
+# Step 2: Filter location fate data
+location_fate_top_area <- location_fate_with_area %>%
+  filter(Location %in% top_locations_by_area$Location)
+
+library(stringr)
+
+location_fate_top_area <- location_fate_top_area %>%
+  mutate(Location = str_remove(Location, "^Cad \\d+ -\\s*"))
+```
+
+```{r}
+ggplot(location_fate_top_area, aes(x = Location, y = Proportion, fill = Fate)) +
+  geom_col(position = "fill", width = 0.8) +
+  facet_wrap(~ Area, scales = "free_x") +
+  scale_y_continuous(labels = scales::percent_format()) +
+  scale_fill_manual(values = c(
+    "Released Alive" = "seagreen",
+    "Deceased" = "firebrick",
+    "Euthanised" = "goldenrod"
+  )) +
+  labs(
+    title = "Proportion of Bycatch Fate (Top Locations by Area)",
+    x = "Location",
+    y = "Proportion of Bycatch Events",
+    fill = "Fate"
+  ) +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 10),
+    axis.title = element_text(face = "bold")
+  )
+```
+
+
+
+
