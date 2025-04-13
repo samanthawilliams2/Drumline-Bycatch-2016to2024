@@ -134,6 +134,83 @@ ggplot(location_fate_top_area, aes(x = Location, y = Proportion, fill = Fate)) +
   )
 ```
 
+Back to just area data:
+```{r}
+# Summarise by Area
+area_fate_summary <- bycatch_cleaned %>%
+  group_by(Area, Fate) %>%
+  summarise(Count = n(), .groups = "drop") %>%
+  group_by(Area) %>%
+  mutate(Proportion = Count / sum(Count)) %>%
+  ungroup() %>%
+  mutate(Area = fct_reorder(Area, Proportion, .fun = sum))  # sort by total
 
+area_counts <- bycatch_cleaned %>%
+  count(Area, name = "BycatchCount") %>%
+  arrange(desc(BycatchCount))  # optional: sort from high to low
+```
+
+
+```{r}
+ggplot(area_counts, aes(y = fct_reorder(Area, BycatchCount), x = BycatchCount)) +
+  geom_col(fill = "steelblue") +
+  labs(
+    title = "Total Bycatch Events by Area",
+    x = "Bycatch Count",
+    y = "Area"
+  ) +
+  theme_classic(base_size = 14) +
+  theme(axis.title = element_text(face = "bold"))
+```
+
+
+Plot fate proportions by Area:
+```{r}
+ggplot(area_fate_summary, aes(y = Area, x = Proportion, fill = Fate)) +
+  geom_col(position = "fill", width = 0.8) +
+  scale_x_continuous(labels = scales::percent_format()) +
+  scale_fill_manual(values = c(
+    "Released Alive" = "seagreen",
+    "Deceased" = "firebrick",
+    "Euthanised" = "goldenrod"
+  )) +
+  labs(
+    title = "Proportion of Bycatch Fate by Area",
+    x = "Proportion of Bycatch Events",
+    y = "Area",
+    fill = "Fate"
+  ) +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.title = element_text(face = "bold")
+  )
+```
+
+```{r}
+# Summarise raw counts by Area and Fate
+area_fate_counts <- bycatch_cleaned %>%
+  group_by(Area, Fate) %>%
+  summarise(Count = n(), .groups = "drop") %>%
+  mutate(Area = fct_reorder(Area, Count, .fun = sum))  # Order by total bycatch
+
+# Plot
+ggplot(area_fate_counts, aes(y = Area, x = Count, fill = Fate)) +
+  geom_col(position = "stack", width = 0.8) +
+  scale_fill_manual(values = c(
+    "Released Alive" = "seagreen",
+    "Deceased" = "firebrick",
+    "Euthanised" = "goldenrod"
+  )) +
+  labs(
+    title = "Bycatch Count and Fate Breakdown by Area",
+    x = "Bycatch Count",
+    y = "Area",
+    fill = "Fate"
+  ) +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.title = element_text(face = "bold")
+  )
+```
 
 
