@@ -69,15 +69,15 @@ ggplot(species_fate_counts, aes(y = CommonName, x = Count, fill = Fate)) +
     "Euthanised" = "goldenrod"
   )) +
   labs(
-    title = "Bycatch Counts and Fate by Species",
-    y = "Species",
+    y = "Species (Common Name)",
     x = "Bycatch Count",
     fill = "Fate"
   ) +
   theme_classic(base_size = 14) +
   theme(
     axis.title = element_text(face = "bold"),
-    axis.text.y = element_text(size = 10, margin = margin(r = 5))  # improved spacing
+    axis.text.y = element_text(size = 10, margin = margin(r = 5)),
+    legend.title = element_text(size = 12, face = "bold")# improved spacing
   )
 ```
 
