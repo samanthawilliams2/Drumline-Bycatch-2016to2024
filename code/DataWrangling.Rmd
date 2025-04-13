@@ -10,15 +10,156 @@ output: html_document
 #### 1. Import Data
 
 ```{r}
-library(tidyverse)
-```
-
-```{r}
 bycatch_rawdata <- read.csv("data/bycatchdata.csv")
 head(bycatch_rawdata)
 ```
 
+#### 2. Tidy Data
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+bycatch_cleaned <- bycatch_rawdata %>% 
+  # For all character/text columns, trim whitespace and apply title case.
+  mutate(across(where(is.character), ~ str_to_title(str_trim(.)))) %>%
+  # Replace "Dead" with "Deceased" in Fate column
+  mutate(Fate = if_else(Fate == "Dead", "Deceased", Fate))
+```
+
+Check missing values:
+```{r}
+# Count total missing values in each column
+colSums(is.na(bycatch_cleaned))
+
+# Count total missing values in the whole dataset
+sum(is.na(bycatch_cleaned))
+```
+
+2620 missing values in the longitude and latitude columns --> should only impact analysis in GIS.
+
+#### 3. Data manipulation / analysis 
+
+Summarise total bycatch by year:
+```{r}
+library(lubridate)
+library(dplyr)
+
+# Prepare yearly count data
+bycatchperyear <- bycatch_cleaned %>%
+  mutate(Year = year(dmy(Date))) %>%
+  count(Year)
+
+summary_stats <- bycatchperyear %>%
+  summarise(
+    mean_bycatch = mean(n),
+    sd_bycatch = sd(n),
+    min_bycatch = min(n),
+    max_bycatch = max(n),
+    median_bycatch = median(n),
+    n_years = n()
+  )
+```
 
 
+#### 4. Plot the data
+```{r}
+# Line plot of bycatch per year
+ggplot(bycatchperyear, aes(x = Year, y = n)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Bycatch Events per Year",
+       y = "Number of Bycatch Events",
+       x = "Year")
+
+```
+
+```{r}
+# Calculate mean and SD
+mean_bycatch <- mean(bycatchperyear$n)
+sd_bycatch <- sd(bycatchperyear$n)
+
+# Plot with SD and mean
+ggplot(bycatchperyear, aes(x = Year, y = n)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = mean_bycatch, linetype = "dashed", color = "blue") +
+  geom_hline(yintercept = mean_bycatch + sd_bycatch, linetype = "dotted", color = "red") +
+  geom_hline(yintercept = mean_bycatch - sd_bycatch, linetype = "dotted", color = "red") +
+  labs(title = "Bycatch Events per Year with Mean ± SD",
+       y = "Number of Bycatch Events",
+       x = "Year",
+       caption = "Blue dashed = mean; red dotted = ±1 SD") +
+  theme_classic()
+```
+
+Mean bycatch per month, summarised by year:
+```{r}
+# Step 1: Add Year and Month
+bycatch_monthly <- bycatch_cleaned %>%
+  mutate(
+    Date = dmy(Date),
+    Year = year(Date),
+    Month = month(Date, label = TRUE)
+  ) %>%
+  count(Year, Month)
+
+# Step 2: Summarize by year (mean monthly bycatch ± SD)
+yearly_summary <- bycatch_monthly %>%
+  group_by(Year) %>%
+  summarise(
+    mean_bycatch = mean(n),
+    sd_bycatch = sd(n),
+    .groups = "drop"
+  )
+
+# Step 3: Plot mean ± SD
+ggplot(yearly_summary, aes(x = Year, y = mean_bycatch)) +
+  geom_point(size = 3) +
+  geom_line() +
+  geom_errorbar(aes(ymin = mean_bycatch - sd_bycatch, ymax = mean_bycatch + sd_bycatch), width = 0.2) +
+  labs(
+    title = "Mean Monthly Bycatch per Year ± SD",
+    y = "Mean Monthly Bycatch",
+    x = "Year"
+  ) +
+  theme_classic() +
+  scale_x_continuous(breaks = unique(yearly_summary$Year))
+```
+
+
+Use this plot for a basic summary at the start of results:
+
+```{r}
+# Step 1: Count total bycatch per year
+bycatch_yearly <- bycatch_cleaned %>%
+  mutate(Year = year(dmy(Date))) %>%
+  count(Year)
+
+# Step 2: Calculate mean and SD
+mean_bycatch <- mean(bycatch_yearly$n)
+sd_bycatch <- sd(bycatch_yearly$n)
+
+# Step 3: Plot with shaded SD area
+bycatch_yearly_plot <- ggplot(bycatch_yearly, aes(x = Year, y = n)) +
+  # Shaded ribbon for ±1 SD
+  geom_ribbon(aes(ymin = mean_bycatch - sd_bycatch, ymax = mean_bycatch + sd_bycatch),
+              fill = "lightblue", alpha = 0.3) +
+  # Mean line
+  geom_hline(yintercept = mean_bycatch, linetype = "dashed", color = "blue") +
+  # Line and points
+  geom_line(color = "black", size = 1) +
+  geom_point(color = "black", size = 2) +
+  labs(
+    y = "Number of Bycatch Events",
+    x = "Year",
+    caption = "Dashed line = mean; shaded area = ±1 SD"
+  ) +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.title = element_text(face = "bold" )
+  )
+```
 
 

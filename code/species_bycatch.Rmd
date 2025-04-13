@@ -1,0 +1,83 @@
+---
+title: "Most frequently caught species"
+author: "Samantha Williams"
+date: '2025-04-13'
+output: html_document
+---
+
+## Species bycatch analysis
+
+```{r}
+bycatch_cleaned <- bycatch_rawdata %>% 
+  # For all character/text columns, trim whitespace and apply title case.
+  mutate(across(where(is.character), ~ str_to_title(str_trim(.)))) %>%
+  # Replace "Dead" with "Deceased" in Fate column
+  mutate(Fate = if_else(Fate == "Dead", "Deceased", Fate))
+```
+
+
+##### 1. Find most commonly caught species:
+```{r}
+species_counts <- bycatch_cleaned %>%
+  count(CommonName, sort = TRUE)
+
+# View top 10 most common species
+head(species_counts, 10)
+```
+
+##### 2. Species fate (Released Alive or Deceased)
+```{r}
+species_fate_summary <- bycatch_cleaned %>%
+  group_by(CommonName, Fate) %>%
+  summarise(Count = n(), .groups = "drop") %>%
+  filter(!is.na(CommonName))  # In case there are any blanks
+```
+
+##### 3. Plotting 
+Bycatch counts and fate by species
+```{r}
+library(tidyverse)
+library(forcats)
+
+# Step 1: Count total bycatch per species
+species_totals <- bycatch_cleaned %>%
+  count(CommonName, sort = TRUE)
+
+# Step 2: Filter out rare species
+species_to_keep <- species_totals %>%
+  filter(n >= 5) %>%
+  pull(CommonName)
+
+# Step 3: Get counts by species and fate, then reorder and reverse levels
+species_fate_counts <- bycatch_cleaned %>%
+  filter(CommonName %in% species_to_keep) %>%
+  group_by(CommonName, Fate) %>%
+  summarise(Count = n(), .groups = "drop") %>%
+  # Reorder by total and then reverse the factor levels
+  mutate(CommonName = fct_reorder(CommonName, Count, .fun = sum)) %>%
+  mutate(CommonName = fct_rev(CommonName))  # This flips the axis
+
+```
+
+Plot the data 
+```{r}
+ggplot(species_fate_counts, aes(y = CommonName, x = Count, fill = Fate)) +
+  geom_col(position = "stack", width = 0.8) +  # slightly narrower bars
+  scale_fill_manual(values = c(
+    "Released Alive" = "seagreen",
+    "Deceased" = "firebrick",
+    "Euthanised" = "goldenrod"
+  )) +
+  labs(
+    title = "Bycatch Counts and Fate by Species",
+    y = "Species",
+    x = "Bycatch Count",
+    fill = "Fate"
+  ) +
+  theme_classic(base_size = 14) +
+  theme(
+    axis.title = element_text(face = "bold"),
+    axis.text.y = element_text(size = 10, margin = margin(r = 5))  # improved spacing
+  )
+```
+
