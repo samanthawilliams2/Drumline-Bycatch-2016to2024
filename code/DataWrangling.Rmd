@@ -1,0 +1,24 @@
+---
+title: "Data Wrangling"
+author: "Samantha Williams"
+date: '2025-04-13'
+output: html_document
+---
+
+## GBRMPA Bycatch Data Manipulation 
+
+#### 1. Import Data
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+bycatch_rawdata <- read.csv("data/bycatchdata.csv")
+head(bycatch_rawdata)
+```
+
+
+
+
+
