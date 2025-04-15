@@ -17,7 +17,8 @@ bycatch_cleaned <- bycatch_rawdata %>%
   # For all character/text columns, trim whitespace and apply title case.
   mutate(across(where(is.character), ~ str_to_title(str_trim(.)))) %>%
   # Replace "Dead" with "Deceased" in Fate column
-  mutate(Fate = if_else(Fate == "Dead", "Deceased", Fate))
+  mutate(Fate = if_else(Fate == "Dead", "Deceased", Fate)) %>%
+  mutate(Area = if_else(Area == "Cp F", "Gladstone", Area))
 ```
 
 ##### 1. Total bycatch per area 
@@ -54,6 +55,14 @@ location_fate <- bycatch_cleaned %>%
   mutate(Proportion = Count / sum(Count)) %>%
   ungroup()
 
+# Create Area lookup from cleaned dataset
+location_area_lookup <- bycatch_cleaned %>%
+  select(Location, Area) %>%
+  distinct()
+
+# Join Area info back into the fate table
+location_fate_with_area <- location_fate %>%
+  left_join(location_area_lookup, by = "Location")
 ```
 
 ```{r}
@@ -164,7 +173,7 @@ ggplot(area_counts, aes(y = fct_reorder(Area, BycatchCount), x = BycatchCount)) 
 ```
 
 
-Plot fate proportions by Area:
+**Plot fate proportions by Area:
 ```{r}
 ggplot(area_fate_summary, aes(y = Area, x = Proportion, fill = Fate)) +
   geom_col(position = "fill", width = 0.8) +
@@ -175,7 +184,6 @@ ggplot(area_fate_summary, aes(y = Area, x = Proportion, fill = Fate)) +
     "Euthanised" = "goldenrod"
   )) +
   labs(
-    title = "Proportion of Bycatch Fate by Area",
     x = "Proportion of Bycatch Events",
     y = "Area",
     fill = "Fate"
@@ -202,7 +210,6 @@ ggplot(area_fate_counts, aes(y = Area, x = Count, fill = Fate)) +
     "Euthanised" = "goldenrod"
   )) +
   labs(
-    title = "Bycatch Count and Fate Breakdown by Area",
     x = "Bycatch Count",
     y = "Area",
     fill = "Fate"

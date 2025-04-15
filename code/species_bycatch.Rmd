@@ -7,7 +7,6 @@ output: html_document
 
 ## Species bycatch analysis
 
-
 ```{r}
 bycatch_rawdata <- read.csv("data/bycatchdata.csv")
 head(bycatch_rawdata)
@@ -18,17 +17,9 @@ bycatch_cleaned <- bycatch_rawdata %>%
   # For all character/text columns, trim whitespace and apply title case.
   mutate(across(where(is.character), ~ str_to_title(str_trim(.)))) %>%
   # Replace "Dead" with "Deceased" in Fate column
-  mutate(Fate = if_else(Fate == "Dead", "Deceased", Fate))
+  mutate(Fate = if_else(Fate == "Dead", "Deceased", Fate)) %>%
+  mutate(Area = if_else(Area == "Cp F", "Gladstone", Area))
 ```
-
-```{r}
-bycatch_cleaned <- bycatch_rawdata %>% 
-  # For all character/text columns, trim whitespace and apply title case.
-  mutate(across(where(is.character), ~ str_to_title(str_trim(.)))) %>%
-  # Replace "Dead" with "Deceased" in Fate column
-  mutate(Fate = if_else(Fate == "Dead", "Deceased", Fate))
-```
-
 
 ##### 1. Find most commonly caught species:
 ```{r}
